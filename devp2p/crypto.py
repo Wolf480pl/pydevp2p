@@ -29,9 +29,9 @@ from rlp.utils import str_to_bytes, safe_ord, ascii_chr
 sha3_256 = lambda x: keccak.new(digest_bits=256, data=str_to_bytes(x))
 from hashlib import sha256
 import struct
-from secp256k1 import PrivateKey, PublicKey, ALL_FLAGS
+from secp256k1 import PrivateKey, PublicKey, ALL_FLAGS, lib
 
-
+ecdsa_ctx = lib.secp256k1_context_create(ALL_FLAGS)
 hmac_sha256 = pyelliptic.hmac_sha256
 
 
@@ -242,7 +242,7 @@ def _decode_sig(sig):
 def ecdsa_verify(pubkey, signature, message):
     assert len(signature) == 65
     assert len(pubkey) == 64
-    pk = PublicKey(b'\04' + pubkey, raw=True)
+    pk = PublicKey(b'\04' + pubkey, raw=True, ctx=ecdsa_ctx)
     return pk.ecdsa_verify(
         message,
         pk.ecdsa_recoverable_convert(
@@ -256,7 +256,7 @@ verify = ecdsa_verify
 
 def ecdsa_sign(msghash, privkey):
     assert len(msghash) == 32
-    pk = PrivateKey(privkey, raw=True)
+    pk = PrivateKey(privkey, raw=True, ctx=ecdsa_ctx)
     signature = pk.ecdsa_recoverable_serialize(
         pk.ecdsa_sign_recoverable(
             msghash, raw=True))
@@ -268,7 +268,7 @@ sign = ecdsa_sign
 
 def ecdsa_recover(message, signature):
     assert len(signature) == 65
-    pk = PublicKey(flags=ALL_FLAGS)
+    pk = PublicKey(flags=ALL_FLAGS, ctx=ecdsa_ctx)
     pk.public_key = pk.ecdsa_recover(
         message,
         pk.ecdsa_recoverable_deserialize(
