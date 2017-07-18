@@ -1,4 +1,5 @@
 import time
+import errno
 import gevent
 import operator
 from collections import OrderedDict
@@ -244,7 +245,7 @@ class Peer(gevent.Greenlet):
             except gevent.socket.error as e:
                 log.debug('read error', errno=e.errno, reason=e.strerror, peer=self)
                 self.report_error('network error %s' % e.strerror)
-                if e.errno in(9,):
+                if e.errno in(errno.EBADF,):
                     # ('Bad file descriptor')
                     self.stop()
                 else:
@@ -255,9 +256,10 @@ class Peer(gevent.Greenlet):
             except gevent.socket.error as e:
                 log.debug('read error', errno=e.errno, reason=e.strerror, peer=self)
                 self.report_error('network error %s' % e.strerror)
-                if e.errno in(50, 54, 60, 65, 104):
+                if e.errno in(errno.ENETDOWN, errno.ECONNRESET, errno.ETIMEDOUT, 
+                              errno.EHOSTUNREACH, errno.ECONNABORTED):
                     # (Network down, Connection reset by peer, timeout, no route to host,
-                    # Connection reset by peer)
+                    # Software caused connection abort (windows weirdness))
                     self.stop()
                 else:
                     raise e
