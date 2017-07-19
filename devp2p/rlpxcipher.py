@@ -221,7 +221,8 @@ class RLPxSession(object):
         optional: remote derives secrets and preemptively sends protocol-handshake (steps 9,11,8,10)
         """
         assert not self.is_initiator
-        assert len(ciphertext) >= 307
+        if len(ciphertext) < 307:
+            raise FormatError("Ciphertext too short")
         try:
             (size, sig, initiator_pubkey, nonce, version) = self.decode_auth_plain(ciphertext)
         except AuthenticationError:
@@ -262,7 +263,8 @@ class RLPxSession(object):
         decode EIP-8 auth message format
         """
         size = struct.unpack('>H', ciphertext[:2])[0] + 2
-        assert len(ciphertext) >= size
+        if len(ciphertext) < size:
+            raise FormatError("Message shorter than specified size")
         try:
             message = self.ecc.ecies_decrypt(ciphertext[2:size], shared_mac_data=ciphertext[:2])
         except RuntimeError as e:
