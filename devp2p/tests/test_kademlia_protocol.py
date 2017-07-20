@@ -317,7 +317,7 @@ def test_eviction_node_inactive():
     assert msg[0] == 'ping'
     assert msg[1] == proto.this_node
     assert len(proto._expected_pongs) == 1
-    expected_pingid = proto._expected_pongs.keys()[0]
+    expected_pingid = list(proto._expected_pongs.keys())[0]
     assert len(expected_pingid) == 96
     echo = expected_pingid[:32]
     assert len(echo) == 32
