@@ -178,11 +178,10 @@ class Peer(gevent.Greenlet):
         # rewrite cmd_id (backwards compatibility)
         if self.offset_based_dispatch:
             for i, protocol in enumerate(self.protocols.values()):
-                if packet.protocol_id > i:
-                    packet.cmd_id += (0 if protocol.max_cmd_id == 0 else protocol.max_cmd_id + 1)
                 if packet.protocol_id == protocol.protocol_id:
                     break
-                packet.protocol_id = 0
+                packet.cmd_id += (0 if protocol.max_cmd_id == 0 else protocol.max_cmd_id + 1)
+            packet.protocol_id = 0
         self.mux.add_packet(packet)
 
     # receiving p2p messages
@@ -193,8 +192,8 @@ class Peer(gevent.Greenlet):
             max_id = 0
             for protocol in self.protocols.values():
                 if packet.cmd_id < max_id + protocol.max_cmd_id + 1:
-                    return protocol, packet.cmd_id - (0 if max_id == 0 else max_id + 1)
-                max_id += protocol.max_cmd_id
+                    return protocol, packet.cmd_id - max_id
+                max_id += protocol.max_cmd_id + 1
             raise UnknownCommandError('no protocol for id %s' % packet.cmd_id)
         # new-style dispatch based on protocol_id
         for i, protocol in enumerate(self.protocols.values()):
