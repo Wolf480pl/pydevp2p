@@ -113,6 +113,86 @@ def test_dumb_peer():
     b_app.stop()
     gevent.sleep(0.1)
 
+def test_offset_dispatch():
+    """ test offset-based cmd_id translation """
+
+    def make_mock_service(n, size):
+        class MockProtocol(devp2p.protocol.BaseProtocol):
+            protocol_id = n
+            max_cmd_id = size
+            name = b'mock%d' % n
+            version = 1
+            def __init__(self, *args, **kwargs):
+                super(MockProtocol, self).__init__(*args, **kwargs)
+                self.cmd_by_id = ['mock_cmd%d' % i for i in range(size + 1)]
+
+        class MockService(devp2p.service.WiredService):
+            name = 'mock%d' % n
+            default_config = {}
+            wire_protocol = MockProtocol
+            def __init__(self):
+                pass
+        return MockService()
+
+    services = [
+        make_mock_service(2, 7),
+        make_mock_service(19, 1),
+    ]
+
+    class MockPeerManager(peermanager.PeerManager):
+        privkey = crypto.sha3(b'a')
+        pubkey = crypto.privtopub(privkey)
+        wired_services = services
+        config = {
+            'client_version_string': 'mock',
+            'p2p': {'listen_port': 3006},
+            'node': {
+                'privkey_hex': encode_hex(privkey),
+                'id': encode_hex(pubkey),
+            }}
+        def __init__(self):
+            pass
+
+    class MockConnection(object):
+        def getpeername(*_):
+            return "mock"
+
+    packets = []
+
+    def mock_add_packet(x):
+        packets.append(x)
+
+    class MockPacket(object):
+        def __init__(self, proto, cmd, cookie):
+            self.protocol_id = proto
+            self.cmd_id = cmd
+            self.__cookie = cookie
+
+    mpm = MockPeerManager()
+    p = peer.Peer(mpm, MockConnection())
+    mpm.peers = [p]
+    p.offset_based_dispatch = True
+    p.mux.add_packet = mock_add_packet
+    p.connect_service(services[0])
+    p.connect_service(services[1])
+    for i in range(8):
+        p.send_packet(MockPacket(2, i, 'protoA%d' % i))
+    for i in range(2):
+        p.send_packet(MockPacket(19, i, 'protoB%d' % i))
+    for i in range(8):
+        pkt = packets.pop(0)
+        proto, cmd_id = p.protocol_cmd_id_from_packet(pkt)
+        assert proto.protocol_id == 2
+        assert proto.name == b'mock2'
+        assert cmd_id == i
+    for i in range(2):
+        pkt = packets.pop(0)
+        proto, cmd_id = p.protocol_cmd_id_from_packet(pkt)
+        assert proto.protocol_id == 19
+        assert proto.name == b'mock19'
+        assert cmd_id == i
+
+    p.stop()
 
 def connect_go():
     a_config = dict(p2p=dict(listen_host='127.0.0.1', listen_port=3010),
