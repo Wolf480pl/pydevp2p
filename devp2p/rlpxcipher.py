@@ -10,7 +10,8 @@ from Crypto.Hash import keccak
 from devp2p.crypto import ECCx
 from devp2p.crypto import ecdsa_recover
 from devp2p.crypto import ecdsa_verify
-import pyelliptic
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 from devp2p.utils import ienc  # integer encode
 import Crypto.Cipher.AES as AES
 
@@ -405,11 +406,11 @@ class RLPxSession(object):
         else:
             self.egress_mac, self.ingress_mac = mac2, mac1
 
-        ciphername = 'aes-256-ctr'
-        iv = "\x00" * 16
+        iv = b'\x00' * 16
         assert len(iv) == 16
-        self.aes_enc = pyelliptic.Cipher(self.aes_secret, iv, 1, ciphername=ciphername)
-        self.aes_dec = pyelliptic.Cipher(self.aes_secret, iv, 0, ciphername=ciphername)
+        cipher = Cipher(algorithms.AES(self.aes_secret), modes.CTR(iv), default_backend())
+        self.aes_enc = cipher.encryptor()
+        self.aes_dec = cipher.decryptor()
         self.mac_enc = AES.new(self.mac_secret, AES.MODE_ECB).encrypt
 
         self.is_ready = True

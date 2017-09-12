@@ -63,7 +63,7 @@ def test_agree():
         "0xf0d2b97981bd0d415a843b5dfe8ab77a30300daab3658c578f2340308a2da1a07f0821367332598b6aa4e180a41e92f4ebbae3518da847f0b1c0bbfe20bcf4e1")
     agreeExpected = fromHex("0xee1418607c2fcfb57fda40380e885a707f49000a5dda056d828b7d9bd1f29a08")
     e = crypto.ECCx(raw_privkey=secret)
-    agreeTest = e.raw_get_ecdh_key(pubkey_x=public[:32], pubkey_y=public[32:])
+    agreeTest = e.get_ecdh_key(public)
     assert(agreeExpected == agreeTest)
 
 
