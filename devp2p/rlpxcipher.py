@@ -406,11 +406,14 @@ class RLPxSession(object):
         else:
             self.egress_mac, self.ingress_mac = mac2, mac1
 
+        # Yes, the encryption is insecure, see:
+        # https://github.com/ethereum/devp2p/issues/32
         iv = b'\x00' * 16
         assert len(iv) == 16
         cipher = Cipher(algorithms.AES(self.aes_secret), modes.CTR(iv), default_backend())
         self.aes_enc = cipher.encryptor()
         self.aes_dec = cipher.decryptor()
+
         self.mac_enc = AES.new(self.mac_secret, AES.MODE_ECB).encrypt
 
         self.is_ready = True
