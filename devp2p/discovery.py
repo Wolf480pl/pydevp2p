@@ -548,6 +548,10 @@ class NodeDiscovery(BaseService, DiscoveryProtocolTransport):
     #     sock.send(message)
 
     def send(self, address, message):
+        if not self.server or self.server.closed:
+            log.warning("DiscoveryNode trying to send but socket is closed")
+            return
+
         assert isinstance(address, Address)
         log.debug('sending', size=len(message), to=address)
         try:
